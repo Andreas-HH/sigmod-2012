@@ -7,30 +7,34 @@
 #include <limits.h>
 #include <time.h>
 
-#define NODEHEIGHT 10
+#define NODEHEIGHT 32
 
 typedef struct skipnode skipnode;
 typedef struct skiplist skiplist;
 
 struct skipnode {
   skipnode *ptr[NODEHEIGHT];
-  int element;
+  Attribute attr;
+  Record rec; // we are supposed to copy the record into the index so that its immutable
 };
 
 struct skiplist {
   int n;
   int maxlevel;
   double p;
+  AttributeType type;
   skipnode *start;
 };
 
-skipnode* createNode(int element);
-skiplist* createList();
+skipnode* createNode(Attribute attr);
+skiplist* createList(AttributeType type);
 double randDouble();
 
-skipnode* findNode(skiplist *list, int element);
-skipnode* findNodeAndTrack(skiplist *list, int element, skipnode **path);
-int insert(skiplist *list, int element);
+skipnode* findNode(skiplist *list, Attribute attr);
+skipnode* findNodeAndTrack(skiplist *list, Attribute attr, skipnode **path);
+ErrorCode insert(skiplist *list, Attribute attr);
 void printtList(skiplist *list);
+void printAttribute(Attribute attr, int brackets);
+int compareAttributes(Attribute l, Attribute r);
 
 #endif /* NAIVE_SKIPLIST */

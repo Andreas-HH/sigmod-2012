@@ -5,42 +5,44 @@ double randDouble() {
 }
 
 
-skipnode* createNode(int element) {
+skipnode* createNode(Attribute attr) {
   int i;
   skipnode *node = (skipnode*) malloc(sizeof(skipnode));
   
   for (i = 0; i < NODEHEIGHT; i++) {
     node->ptr[i] = 0;
   }
-  node->element = element;
+  node->attr = attr;
   
   return node;
 }
 
-skiplist* createList() {
+skiplist* createList(AttributeType type) {
   skiplist *list = (skiplist*) malloc(sizeof(skiplist));
-  list->start = createNode(INT_MIN);
+  Attribute a = {type, INT_MIN};
+  list->start = createNode(a);
   list->p = 0.5;
   list->n = 0;
-  list->maxlevel = 2;
+  list->maxlevel = 1;
+  list->type = type;
   
   return list;
 }
 
-skipnode* findNode(skiplist *list, int element) {
+skipnode* findNode(skiplist* list, Attribute attr) {
   skipnode *path[NODEHEIGHT];
   
-  return findNodeAndTrack(list, element, path);
+  return findNodeAndTrack(list, attr, path);
 }
 
-skipnode* findNodeAndTrack(skiplist* list, int element, skipnode **path) {
+skipnode* findNodeAndTrack(skiplist* list, Attribute attr, skipnode** path) {
 //   int depth = 0;
   int level = list->maxlevel;
   skipnode *current = list->start;
   
   while (level > 0) {
     level--;
-    while (current->ptr[level] != 0 && current->ptr[level]->element <= element) {
+    while (current->ptr[level] != 0 && compareAttributes(current->ptr[level]->attr, attr) < 0) {
       current = current->ptr[level];
 //       depth++;
     }
@@ -50,17 +52,19 @@ skipnode* findNodeAndTrack(skiplist* list, int element, skipnode **path) {
   return current;
 }
 
-int insert(skiplist *list, int element) {
+ErrorCode insert(skiplist* list, Attribute attr) {
   int i;
-  skipnode *node = createNode(element);
+  skipnode *node = createNode(attr);
   skipnode *position;
   skipnode *path[NODEHEIGHT];
+  
+  if (attr.type != list->type) return kErrorIncompatibleKey;
   
   for (i = 0; i < NODEHEIGHT; i++) {
     path[i] = list->start;
   }
   
-  position = findNodeAndTrack(list, element, path);
+  position = findNodeAndTrack(list, attr, path);
 //   if (position->element == element) return 1;
   node->ptr[0] = position->ptr[0];
   position->ptr[0] = node;
@@ -73,8 +77,9 @@ int insert(skiplist *list, int element) {
     }
   }
   if (i > list->maxlevel) list->maxlevel = i;
+  list->n++;
   
-  return 0;
+  return kOk;
 }
 
 // maybe want to use an iterator here?
@@ -86,7 +91,7 @@ void printtList(skiplist* list) {
     current = list->start;
     while (current != 0) {
       if (current->ptr[list->maxlevel - i - 1] == 0) printf("[x]\t");
-      else printf("[%i]\t", current->ptr[list->maxlevel - i - 1]->element);
+      else printAttribute(current->ptr[list->maxlevel - i - 1]->attr, 1);
       current = current->ptr[0];
     }
     printf("\n");
@@ -94,44 +99,88 @@ void printtList(skiplist* list) {
   printf(" .\t");
   current = list->start->ptr[0];
   while (current != 0) {
-    printf(" %i\t", current->element);
+    printAttribute(current->attr, 0);
     current = current->ptr[0];
   }
   printf("\n");
 }
 
+/**
+ * Compares l and r, return 0 if they are incomparable, -1 if l <= r and 1 otherwise.
+ */
+int compareAttributes(Attribute l, Attribute r) {
+  int i;
+  
+  if (l.type != r.type) return 0;
+  switch (l.type) {
+    case kShort:
+      if (l.short_value <= r.short_value) return -1;
+      else                                return 1;
+      break;
+    case kInt:
+      if (l.int_value <= r.int_value) return -1;
+      else                            return 1;
+      break;
+    case kVarchar:
+      for (i = 0; i < MAX_VARCHAR_LENGTH; i++) {
+	if (l.char_value[i] == r.char_value[i]) continue;
+	if (l.char_value[i] < r.char_value[i])  return -1;
+	else                                    return 1;
+      }
+      if (i == MAX_VARCHAR_LENGTH) return -1; // -1 in case of equality
+      break;
+  }
+  return 0;
+}
+
+void printAttribute(Attribute attr, int brackets) {
+  if (brackets) printf("[");
+  switch (attr.type) {
+    case kShort:
+      printf("%i", attr.short_value);
+      break;
+    case kInt:
+      printf("%ld", attr.int_value);
+      break;
+    case kVarchar:
+      printf("%s", attr.char_value);
+      break;
+  }
+  if (brackets) printf("]");
+  printf("\t");
+}
 
 int main(int argc, char *argv[]) {
   int i;
-  skiplist *list = createList();
+  AttributeType type = kInt;
+  Attribute a = {type, -3};
+  skiplist *list = createList(type);
   skipnode *node;
   
   srand (time(NULL));
   
-  insert(list, 5);
-  insert(list, 35);
-  insert(list, 17);
-  insert(list, 20);
-  insert(list, 2);
-  insert(list, 28);
-  insert(list, 56);
-  insert(list, 25);
-  insert(list, 12);
-  insert(list, 33);
-  insert(list, 87);
-  insert(list, 92);
-  insert(list, 15);
-  insert(list, 65);
-  insert(list, 42);
-  insert(list, 37);
-  insert(list, 11);
-  insert(list, 5);
-//   node = findNode(list, 5);
+  a.int_value = 5;
+  insert(list, a);
+  a.int_value = 97;
+  insert(list, a);
+  a.int_value = 15;
+  insert(list, a);
+  a.int_value = 33;
+  insert(list, a);
+  a.int_value = 42;
+  insert(list, a);
+  a.int_value = 2;
+  insert(list, a);
+  a.int_value = 11;
+  insert(list, a);
+  a.int_value = 77;
+  insert(list, a);
+  a.int_value = 57;
+  insert(list, a);
+  a.int_value = 9;
+  insert(list, a);
   
   printtList(list);
-//   for (i = 0; i < NODEHEIGHT; i++) {
-//     printf("ptr[%i] = %i \n", i, node->ptr[i]);
-//   }
-//   printf("value: %i \n", node->element);
+  
   return 0;
 }
