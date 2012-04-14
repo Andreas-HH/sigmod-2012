@@ -5,7 +5,7 @@ skipnode* findNodeAndTrack(skiplist *list, Key key, skipnode **path);
 double randDouble();
 void printAttribute(Attribute attr, int brackets);
 int compareKeys(Key l, Key r, int num_attribute);
-
+int compareAttributes(Attribute l, Attribute r);
 
 double randDouble() {
   return (double) rand() / (double) RAND_MAX;
@@ -21,7 +21,8 @@ skipnode* createNode(Key key, Record* rec) {
   skipnode *node = (skipnode*) malloc(sizeof(skipnode));
   
   for (i = 0; i < NODEHEIGHT; i++) {
-    node->ptr[i] = 0;
+    node->right[i] = 0;
+    node->next_dim[i] = 0;
   }
   node->committed = 0;
   if (rec != 0) {
@@ -35,15 +36,25 @@ skipnode* createNode(Key key, Record* rec) {
 }
 
 // need to find min properly, depending on type!
-skiplist* createList(KeyType type, int dim) {
+skiplist* createList(KeyType type, int dim, int attribute_count) {
+//   int i;
   Key key;
-  skiplist *list = (skiplist*) malloc(sizeof(skiplist));
+  skiplist *list;
+  
+//   if (dim == attribute_count) return 0;
+  
+  list = (skiplist*) malloc(sizeof(skiplist));
   list->start = createNode(key, 0);
   list->p = 0.5;
   list->n = 0;
   list->maxlevel = 1;
   list->type = type;
   list->num_attribute = dim;
+  list->attribute_count = attribute_count;
+  
+//   for (i = 0; i < NODEHEIGHT-1; i++) {
+//     list->start->next_dim[i] = createList(type, dim+1, attribute_count);
+//   }
   
   return list;
 }
@@ -59,7 +70,7 @@ ErrorCode deleteList(skiplist* list) {
   
   last = list->start;
   while (last != 0) {
-    current = last->ptr[0];
+    current = last->right[0];
     deleteNode(last);
     last = current;
   }
@@ -82,8 +93,8 @@ skipnode* findNodeAndTrack(skiplist* list, Key key, skipnode** path) {
   
   while (level > 0) {
     level--;
-    while (current->ptr[level] != 0 && compareKeys(current->ptr[level]->key, key, current->num_attribute) < 0) {
-      current = current->ptr[level];
+    while (current->right[level] != 0 && compareKeys(current->right[level]->key, key, list->num_attribute) < 0) {
+      current = current->right[level];
 //       printf("compare < 0! \n");
 //       depth++;
     }
@@ -94,7 +105,7 @@ skipnode* findNodeAndTrack(skiplist* list, Key key, skipnode** path) {
 }
 
 skipnode* nextNode(skipnode* current) {
-  return current->ptr[0];
+  return current->right[0];
 }
 
 
@@ -112,18 +123,23 @@ ErrorCode insert(skiplist* list, Key key, Record* rec, skipnode **insnode) {
   
   position = findNodeAndTrack(list, key, path);
 //   printAttribute(attr, 1);
-//   printf(" %i \n", position->ptr[2]);
+//   printf(" %i \n", position->right[2]);
 //   if (position == list->start) printf("found start position! \n");
 //   if (position->element == element) return 1;
-  node->ptr[0] = position->ptr[0];
-  position->ptr[0] = node;
+  node->right[0] = position->right[0];
+  position->right[0] = node;
   for (i = 1; i < NODEHEIGHT; i++) {
     if (randDouble() < list->p) {
-      node->ptr[i] = path[i]->ptr[i];
-      path[i]->ptr[i] = node;
+      node->right[i] = path[i]->right[i];
+      path[i]->right[i] = node;
     } else {
       break;
     }
+  }
+  // insert record into higher-level nodes
+  for ( ; i < list->maxlevel; i++) {
+    if (path[i]->next_dim[i] != 0)
+      insert(path[i]->next_dim[i], key, rec, insnode);
   }
   if (i > list->maxlevel) list->maxlevel = i;
   list->n++;
@@ -140,44 +156,33 @@ void printList(skiplist* list) {
   for (i = 0; i < list->maxlevel; i++) {
     current = list->start;
     while (current != 0) {
-      if (current->ptr[list->maxlevel - i - 1] == 0) printf("[x]\t");
-      else printAttribute(*current->ptr[list->maxlevel - i - 1]->key.value[list->num_attribute], 1);
-      current = current->ptr[0];
+      if (current->right[list->maxlevel - i - 1] == 0) printf("[x]\t");
+      else printAttribute(*current->right[list->maxlevel - i - 1]->key.value[list->num_attribute], 1);
+      current = current->right[0];
     }
     printf("\n");
   }
   printf(" .\t");
-  current = list->start->ptr[0];
+  current = list->start->right[0];
   while (current != 0) {
     printf("%s,", current->record->payload.data);
     printAttribute(*current->key.value[list->num_attribute], 0);
-    current = current->ptr[0];
+    current = current->right[0];
   }
   printf("\n");
 }
 
-/**
- * Compares l and r, return 0 if they are incomparable, -1 if l <= r and 1 otherwise.
- */
-int compareKeys(Key left, Key right, int num_attribute) {
+int compareAttributes(Attribute l, Attribute r) {
   int i;
-  Attribute l = *left.value[num_attribute];
-  Attribute r = *right.value[num_attribute];
   
-//   printf("comparing attributes: ");
-//   printAttribute(l, 0);
-//   printAttribute(r, 0);
-//   printf("\n");
-  
-  if (l.type != r.type) return 0;
   switch (l.type) {
     case kShort:
-      if (l.short_value <= r.short_value) return -1;
-      else                                return 1;
+      if (l.short_value < r.short_value)      return -1;
+      else if (l.short_value > r.short_value) return 1;
       break;
     case kInt:
-      if (l.int_value <= r.int_value) return -1;
-      else                            return 1;
+      if (l.int_value <= r.int_value)     return -1;
+      else if (l.int_value > r.int_value) return 1;
       break;
     case kVarchar:
       for (i = 0; i < MAX_VARCHAR_LENGTH; i++) {
@@ -185,10 +190,35 @@ int compareKeys(Key left, Key right, int num_attribute) {
 	if (l.char_value[i] < r.char_value[i])  return -1;
 	else                                    return 1;
       }
-      if (i == MAX_VARCHAR_LENGTH) return -1; // -1 in case of equality
       break;
   }
+  
   return 0;
+}
+
+int compareKeys(Key left, Key right, int num_attribute) {
+  int i;
+  Attribute l = *left.value[num_attribute];
+  Attribute r = *right.value[num_attribute];
+  int compare;
+  
+//   printf("comparing attributes: ");
+//   printAttribute(l, 0);
+//   printAttribute(r, 0);
+//   printf("\n");
+  compare = compareAttributes(l, r);
+  
+  if (compare == 0) {
+    for (i = 0; i < left.attribute_count; i++) {
+      if (i == num_attribute) continue;
+      l = *left.value[i];
+      r = *right.value[i];
+      compare = compareAttributes(l, r);
+      if (compare != 0) break;
+    }
+  }
+  
+  return compare;
 }
 
 void printAttribute(Attribute attr, int brackets) {

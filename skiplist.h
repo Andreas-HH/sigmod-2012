@@ -9,14 +9,18 @@
 #include <stdio.h>
 #include <string.h>
 
-#define NODEHEIGHT 32
+#define NODEHEIGHT 20
+#define MAX_DIM    32
 
 
 typedef struct skipnode skipnode;
 typedef struct skiplist skiplist;
 
 struct skipnode {
-  skipnode *ptr[NODEHEIGHT];
+//   skipnode *ptr[NODEHEIGHT];
+  skipnode *right[NODEHEIGHT];
+//   skipnode *down;
+  skiplist *next_dim[NODEHEIGHT-1]; // no next dim for leaf nodes
   int num_attribute;
   Key key;
   Record *record; // we are supposed to copy the record into the index so that its immutable
@@ -28,13 +32,14 @@ struct skiplist {
   int maxlevel;
   double p;
   int num_attribute;
+  int attribute_count;
 //   AttributeType type;
   AttributeType *type;
   skipnode *start;
 };
 
 skipnode* createNode(Key key, Record* rec);
-skiplist* createList(KeyType type, int dim);
+skiplist* createList(KeyType type, int dim, int attribute_count);
 skipnode* findNode(skiplist* list, Key key);
 skipnode* nextNode(skipnode *current, Key key);
 ErrorCode insert(skiplist* list, Key key, Record* rec, skipnode** insnode);

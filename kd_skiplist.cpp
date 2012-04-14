@@ -53,7 +53,7 @@ ErrorCode CreateIndex(const char* name, uint8_t attribute_count, KeyType type) {
   index->lists = (skiplist**) malloc(attribute_count*sizeof(skiplist*));
   
   for (i = 0; i < attribute_count; i++) {
-    index->lists[i] = createList(type, i);
+    index->lists[i] = createList(type, i, attribute_count);
 //     printtList(index->lists[i]);
   }
   
