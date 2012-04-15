@@ -4,13 +4,13 @@ all: kdindex
 # 	g++ skiplist.cpp -o skiplist
 
 kdindex: kd_test.cpp kd_skiplist.o skiplist.o
-	g++ -std=c++0x -o kdindex kd_skiplist.o skiplist.o kd_test.cpp
+	g++ -g -std=c++0x -o kdindex kd_skiplist.o skiplist.o kd_test.cpp
 
 kd_skiplist.o: kd_skiplist.h kd_skiplist.cpp skiplist.o
-	g++ -c -std=c++0x -o kd_skiplist.o kd_skiplist.cpp
+	g++ -g -c -std=c++0x -o kd_skiplist.o kd_skiplist.cpp
 
 skiplist.o: skiplist.h skiplist.cpp
-	g++ -c -std=c++0x -o skiplist.o skiplist.cpp
+	g++ -g -c -std=c++0x -o skiplist.o skiplist.cpp
 
 clean:
 	rm *.o

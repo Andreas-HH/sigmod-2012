@@ -7,10 +7,13 @@ void printIndex(Index *index);
 void printIndex(Index* index) {
   int i;
   
-  for (i = 0; i < index->attribute_count; i++) {
-    printList(index->lists[i]);
-    printf("\n");
-  }
+//   printList(index->list);
+  printAllLists();
+  
+//   for (i = 0; i < index->attribute_count; i++) {
+//     printList(index->lists[i]);
+//     printf("\n");
+//   }
 }
 
 //////////////////////////////////////////////////////////////
@@ -38,8 +41,10 @@ ErrorCode CommitTransaction(Transaction **tx) {
 ErrorCode CreateIndex(const char* name, uint8_t attribute_count, KeyType type) {
   int i;
   Index *index;
+  time_t t = time(NULL);
   
-  srand (time(NULL));
+  printf("using seed: %ld \n", t);
+  srand (1334530959);
   if (all_indices[string(name)] != 0) 
     return kErrorIndexExists;
   index = (Index*) malloc(sizeof(Index));
@@ -50,12 +55,13 @@ ErrorCode CreateIndex(const char* name, uint8_t attribute_count, KeyType type) {
   
   index->name = new string(name);
   index->attribute_count = attribute_count;
-  index->lists = (skiplist**) malloc(attribute_count*sizeof(skiplist*));
+//   index->lists = (skiplist**) malloc(attribute_count*sizeof(skiplist*));
   
-  for (i = 0; i < attribute_count; i++) {
-    index->lists[i] = createList(type, i, attribute_count);
+  index->list = createList(type, 0, attribute_count);
+//   for (i = 0; i < attribute_count; i++) {
+//     index->lists[i] = createList(type, i, attribute_count);
 //     printtList(index->lists[i]);
-  }
+//   }
   
   all_indices[string(name)] = index;
 }
@@ -76,11 +82,12 @@ ErrorCode DeleteIndex(const char* name) {
   printf("deleting an index with %i keys \n", index->attribute_count);
   if (index == 0)
     return kErrorUnknownIndex;
-  for (i = 0; i < index->attribute_count; i++) {
-    err = deleteList(index->lists[i]);
-    if (err != kOk) // we don't know if some memroy wasn't freed here
-      return err;
-  }
+//   for (i = 0; i < index->attribute_count; i++) {
+//     err = deleteList(index->lists[i]);
+//     if (err != kOk) // we don't know if some memroy wasn't freed here
+//       return err;
+//   }
+  deleteList(index->list);
   
   return kOk;
 }
@@ -88,10 +95,11 @@ ErrorCode DeleteIndex(const char* name) {
 ErrorCode InsertRecord(Transaction *tx, Index *idx, Record *record) {
   skipnode *node;
   
-  int listnum = randInt(idx->attribute_count);
+  printf("Inserting some record \n");
+//   int listnum = randInt(idx->attribute_count);
 //   printf("taking list #%i \n", listnum);
 //   printtList(idx->lists[listnum]);
-  insert(idx->lists[listnum], record->key, record, &node);
+  insert(idx->list, record->key, record, &node);
   tx->inserted_nodes->insert(node);
 //   printtList(idx->lists[listnum]);
 //   printIndex(idx);

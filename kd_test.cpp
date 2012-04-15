@@ -2,7 +2,7 @@
 
 int main(int argc, char *argv[]) {
   int i, j;
-  int record_count = 20;
+  int record_count = 4;
   uint8_t len = 5;
   AttributeType type[len];
   const char hans[] = "hans";
@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
   CreateIndex(hans, len, type);
   OpenIndex(hans, &index);
   BeginTransaction(&t);
-  for (i = 0; i < record_count; i++) {
+  for (i = 0; i < 4; i++) { //record_count
     InsertRecord(t, index, recs+i);
   }
   CommitTransaction(&t);

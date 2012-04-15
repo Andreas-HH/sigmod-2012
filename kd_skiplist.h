@@ -27,7 +27,7 @@ struct Index {
   uint8_t attribute_count;
   string *name;
   KeyType *type;
-  skiplist **lists;
+  skiplist *list;
 };
 
 #endif /* KD_SKIPLIST */

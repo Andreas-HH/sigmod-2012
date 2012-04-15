@@ -8,10 +8,12 @@
 #include <time.h>
 #include <stdio.h>
 #include <string.h>
+#include <map>
 
 #define NODEHEIGHT 20
 #define MAX_DIM    32
 
+using namespace std;
 
 typedef struct skipnode skipnode;
 typedef struct skiplist skiplist;
@@ -20,7 +22,7 @@ struct skipnode {
 //   skipnode *ptr[NODEHEIGHT];
   skipnode *right[NODEHEIGHT];
 //   skipnode *down;
-  skiplist *next_dim[NODEHEIGHT-1]; // no next dim for leaf nodes
+  skiplist *next_dim[NODEHEIGHT]; // no next dim for leaf nodes
   int num_attribute;
   Key key;
   Record *record; // we are supposed to copy the record into the index so that its immutable
@@ -28,6 +30,7 @@ struct skipnode {
 };
 
 struct skiplist {
+  int num;
   int n;
   int maxlevel;
   double p;
@@ -46,6 +49,7 @@ ErrorCode insert(skiplist* list, Key key, Record* rec, skipnode** insnode);
 ErrorCode deleteNode(skipnode *node);
 ErrorCode deleteList(skiplist *list);
 
+void printAllLists();
 void printList(skiplist *list);
 int randInt(int limit);
 
