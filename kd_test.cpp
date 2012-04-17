@@ -7,11 +7,13 @@ int main(int argc, char *argv[]) {
   AttributeType type[len];
   const char hans[] = "hans";
   Index *index;
+  Iterator **iterator = (Iterator**) malloc(sizeof(Iterator*));
   Transaction *t;
   Record recs[record_count];
   Key keys[record_count];
   Key minkey;
   Key maxkey;
+  Record *currentResult;
   Attribute attr;
   Block blocks[record_count];
   time_t tm;
@@ -28,7 +30,7 @@ int main(int argc, char *argv[]) {
       type[i] = kInt;
       keys[j].value[i] = (Attribute*) malloc(sizeof(Attribute));
       keys[j].value[i]->type = kInt;
-      keys[j].value[i]->int_value = randInt(10);
+      keys[j].value[i]->int_value = randInt(record_count/100);
 //       printf("key.value[%i] = %ld \n", i, keys[j].value[i]->int_value);
     }
     keys[j].value[i] = (Attribute*) malloc(sizeof(Attribute));
@@ -46,10 +48,10 @@ int main(int argc, char *argv[]) {
   for (i = 0; i < len; i++) {
     minkey.value[i] = (Attribute*) malloc(sizeof(Attribute));
     minkey.value[i]->type = kInt;
-    minkey.value[i]->int_value = 3;
+    minkey.value[i]->int_value = 30;
     maxkey.value[i] = (Attribute*) malloc(sizeof(Attribute));
     maxkey.value[i]->type = kInt;
-    maxkey.value[i]->int_value = 6;
+    maxkey.value[i]->int_value = 60;
   }
   printf("Done wit hgenerating data. \n");
   
@@ -65,18 +67,18 @@ int main(int argc, char *argv[]) {
   printf("finished inserting, took %is \n", time(NULL)-tm);
   tm = time(NULL);
   for (i = 0; i < record_count; i+=2) {
-    if (i == 84) {
-      printf("deleting record %i \n", i);
-    }
-    DeleteRecord(t, index, recs+i, 0);
+//     DeleteRecord(t, index, recs+i, 0);
   }
 //   DeleteRecord(t, index, recs, 0);
   printf("deleted half of the records, took %is \n", time(NULL)-tm);
-  GetRecords(t, index, minkey, maxkey, 0);
+  GetRecords(t, index, minkey, maxkey, iterator);
+  while (GetNext(*iterator, &currentResult) != kErrorNotFound) {
+    printf("%i \t(%i\t%i\t%i\t%i\t%i) \n", currentResult->key.value[5]->int_value, currentResult->key.value[0]->int_value, currentResult->key.value[1]->int_value, currentResult->key.value[2]->int_value, currentResult->key.value[3]->int_value, currentResult->key.value[4]->int_value);
+  }
   printf("just to be sure: \n");
-  for (i = 1; i < record_count; i += 2) {
+  for (i = 0; i < record_count; i++) {
     for (j = 0; j < 5; j++) { // len
-      if (!(compareKeyElements(minkey, keys[i], j) <= 0 && compareKeyElements(keys[i], maxkey, j) < 0)) {
+      if (!(compareKeys(minkey, keys[i], j, true) <= 0 && compareKeys(keys[i], maxkey, j, true) < 0)) {
 	break;
       }
     }

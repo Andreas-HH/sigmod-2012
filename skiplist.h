@@ -9,9 +9,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <map>
+#include <set>
 
 #define NODEHEIGHT 20
-#define MAX_DIM    32
+#define MAX_DIM    4
 
 using namespace std;
 
@@ -53,12 +54,21 @@ skipnode* nextNode(skipnode *current, Key key);
 
 ErrorCode insert(skiplist *list, Key key, Record* rec, skipnode** insnode);
 ErrorCode deleteRecord(skiplist *list, Key key);
-ErrorCode findRecords(skiplist* list, Key minkey, Key maxkey);
+ErrorCode findRecords(skiplist* list, Key minkey, Key maxkey, multimap< Key, skipnode* >* result);
 
-int compareKeyElements(Key left, Key right, int num_attribute);
+// int compareKeyElements(Key left, Key right, int num_attribute);
 int compareKeys(Key left, Key right, int num_attribute = 0, bool elementOnly = false);
 void printAllLists();
 void printList(skiplist *list);
 int randInt(int limit);
+
+bool operator<(Key l, Key r);
+// struct lkey
+// {
+//   bool operator()(Key l, Key r) 
+//   {
+//     return compareKeys(l, r) < 0;
+//   }
+// };
 
 #endif /* NAIVE_SKIPLIST */

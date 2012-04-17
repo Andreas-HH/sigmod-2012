@@ -12,9 +12,11 @@
 using namespace std;
 
 struct Iterator {
-  int current_list;
+//   int current_list;
   Transaction *transaction;
-  skiplist **lists;
+  multimap< Key, skipnode* > *result;
+  multimap< Key, skipnode* >::iterator resultIter;
+//   skiplist **lists;
 };
 
 struct Transaction {

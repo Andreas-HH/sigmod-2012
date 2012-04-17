@@ -17,6 +17,9 @@ int randInt(int limit) {
   return (int) (randDouble() * (double) limit);
 }
 
+bool operator<(Key l, Key r) {
+  return compareKeys(l, r) < 0;
+}
 
 skipnode* createNode(Key key, Record* rec) {
   int i;
@@ -145,7 +148,7 @@ skipnode* nextNode(skipnode* current) {
   return current->right[0];
 }
 
-ErrorCode findRecords(skiplist *list, Key minkey, Key maxkey) {
+ErrorCode findRecords(skiplist* list, Key minkey, Key maxkey, multimap< Key, skipnode* > *result) {
   int i, j;
   skipnode *minnode;
   skipnode *maxnode;
@@ -176,14 +179,16 @@ ErrorCode findRecords(skiplist *list, Key minkey, Key maxkey) {
   
   if (i == 0 || minpath[i]->next_dim[i-1] == 0) { // reached leaf level or last dimension, just scan nodes
     current = minnode->right[0]; // remember, findNode is always one to the left
-    while (current != 0 && compareKeyElements(current->key, maxkey, list->num_attribute) <= 0) {
+    while (current != 0 && compareKeys(current->key, maxkey, list->num_attribute, true) <= 0) {
       for (j = 0; j < 5; j++) { // len
         if (!(compareKeys(minkey, current->key, j, true) <= 0 && compareKeys(current->key, maxkey, j, true) < 0)) {
 	  break;
         }
       }
       if (j == 5) { // len
-        printf("in range: %i \n", current->key.value[5]->int_value);
+//         result[current->key] = current;
+        result->insert(pair< Key, skipnode* >(current->key, current));
+//         printf("in range: %i \n", current->key.value[5]->int_value);
       }
 //       printf("found record: %s \n", current->record->payload);
       current = current->right[0];
@@ -191,11 +196,11 @@ ErrorCode findRecords(skiplist *list, Key minkey, Key maxkey) {
   } else { // can move to next dimension
     current = minpath[i];
     while (current != maxpath[i]) {
-      findRecords(current->next_dim[i-1], minkey, maxkey);
+      findRecords(current->next_dim[i-1], minkey, maxkey, result);
       current = current->right[i];
     }
 //     findRecords(minpath[i]->next_dim[i-1], minkey, maxkey);
-    findRecords(maxpath[i]->next_dim[i-1], minkey, maxkey);
+    findRecords(maxpath[i]->next_dim[i-1], minkey, maxkey, result);
   }
   return kOk;
 }
@@ -409,13 +414,13 @@ int compareAttributes(Attribute l, Attribute r) {
   return 0;
 }
 
-int compareKeyElements(Key left, Key right, int num_attribute) {
-  int i;
-  Attribute l = *left.value[num_attribute];
-  Attribute r = *right.value[num_attribute];
-  
-  return compareAttributes(l, r);
-}
+// int compareKeyElements(Key left, Key right, int num_attribute) {
+//   int i;
+//   Attribute l = *left.value[num_attribute];
+//   Attribute r = *right.value[num_attribute];
+//   
+//   return compareAttributes(l, r);
+// }
 
 int compareKeys(Key left, Key right, int num_attribute, bool elementOnly) {
   int i;

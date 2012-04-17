@@ -58,7 +58,7 @@ ErrorCode CreateIndex(const char* name, uint8_t attribute_count, KeyType type) {
   index->attribute_count = attribute_count;
 //   index->lists = (skiplist**) malloc(attribute_count*sizeof(skiplist*));
   
-  index->list = createList(type, 0, attribute_count, 3);
+  index->list = createList(type, 0, attribute_count, min((uint8_t) MAX_DIM, attribute_count));
 //   for (i = 0; i < attribute_count; i++) {
 //     index->lists[i] = createList(type, i, attribute_count);
 //     printtList(index->lists[i]);
@@ -119,10 +119,24 @@ ErrorCode DeleteRecord(Transaction *tx, Index *idx, Record *record, uint8_t flag
 }
 
 ErrorCode GetRecords(Transaction *tx, Index *idx, Key min_keys, Key max_keys, Iterator **it) {
-  return findRecords(idx->list, min_keys, max_keys);
+  Iterator *iter = (Iterator*) malloc(sizeof(Iterator));
+  iter->result = new multimap< Key, skipnode* >();
+  *it = iter;
+  findRecords(idx->list, min_keys, max_keys, iter->result);
+  iter->resultIter = iter->result->begin();
+  
+  return kOk;
 }
 
 ErrorCode GetNext(Iterator *it, Record** record) {
+//   multimap< Key, skipnode* >::iterator iter = it->resultIter;
+//   printf("have iterator: %s \n", it->resultIter->second->record->payload);
+  if (it->resultIter == it->result->end()) {
+    return kErrorNotFound;
+  }
+  
+  *record = it->resultIter->second->record;
+  it->resultIter++;
   return kOk;
 }
 
