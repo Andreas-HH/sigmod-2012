@@ -231,7 +231,6 @@ ErrorCode deleteRecord(skiplist* list, Key key) {
       path[i]->right[i] = node->right[i];
       if (path[i]->next_dim[i-1] != 0) {
 	deleteList(path[i]->next_dim[i-1]);
-	path[i]->next_dim[i-1] = 0;
 	fillNextDim(list, path[i], path[i]->right[i], i-1);
       } else {
 // 	printf("o_O \n");
