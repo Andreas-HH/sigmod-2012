@@ -27,12 +27,14 @@ struct skipnode {
   Key key;
   Record *record; // we are supposed to copy the record into the index so that its immutable
   int committed;
+  int64_t hans;
 };
 
 struct skiplist {
   int num;
   int n;
   int maxlevel;
+  int max_dim; // maximum indexed dimension
   double p;
   int num_attribute;
   int attribute_count;
@@ -42,13 +44,19 @@ struct skiplist {
 };
 
 skipnode* createNode(Key key, Record* rec);
-skiplist* createList(KeyType type, int dim, int attribute_count);
-skipnode* findNode(skiplist* list, Key key);
-skipnode* nextNode(skipnode *current, Key key);
-ErrorCode insert(skiplist* list, Key key, Record* rec, skipnode** insnode);
+skiplist* createList(KeyType type, int dim, int attribute_count, int max_dim);
 ErrorCode deleteNode(skipnode *node);
 ErrorCode deleteList(skiplist *list);
 
+skipnode* findNode(skiplist* list, Key key);
+skipnode* nextNode(skipnode *current, Key key);
+
+ErrorCode insert(skiplist *list, Key key, Record* rec, skipnode** insnode);
+ErrorCode deleteRecord(skiplist *list, Key key);
+ErrorCode findRecords(skiplist* list, Key minkey, Key maxkey);
+
+int compareKeyElements(Key left, Key right, int num_attribute);
+int compareKeys(Key left, Key right, int num_attribute = 0, bool elementOnly = false);
 void printAllLists();
 void printList(skiplist *list);
 int randInt(int limit);

@@ -28,14 +28,15 @@ ErrorCode BeginTransaction(Transaction **tx) {
 //   t->deleted_nodes->insert(0);
   
   *tx = t;
+  return kOk;
 }
 
 ErrorCode AbortTransaction(Transaction **tx) {
-  
+  return kOk;
 }
 
 ErrorCode CommitTransaction(Transaction **tx) {
-  
+  return kOk;
 }
 
 ErrorCode CreateIndex(const char* name, uint8_t attribute_count, KeyType type) {
@@ -44,7 +45,7 @@ ErrorCode CreateIndex(const char* name, uint8_t attribute_count, KeyType type) {
   time_t t = time(NULL);
   
   printf("using seed: %ld \n", t);
-  srand (1334530959);
+  srand (1334618018); // time(NULL)
   if (all_indices[string(name)] != 0) 
     return kErrorIndexExists;
   index = (Index*) malloc(sizeof(Index));
@@ -57,21 +58,24 @@ ErrorCode CreateIndex(const char* name, uint8_t attribute_count, KeyType type) {
   index->attribute_count = attribute_count;
 //   index->lists = (skiplist**) malloc(attribute_count*sizeof(skiplist*));
   
-  index->list = createList(type, 0, attribute_count);
+  index->list = createList(type, 0, attribute_count, 3);
 //   for (i = 0; i < attribute_count; i++) {
 //     index->lists[i] = createList(type, i, attribute_count);
 //     printtList(index->lists[i]);
 //   }
   
   all_indices[string(name)] = index;
+  return kOk;
 }
 
 ErrorCode OpenIndex(const char* name, Index **idx) {
   *idx = all_indices[string(name)];
+  return kOk;
 }
 
 ErrorCode CloseIndex(Index **idx) {
-  printIndex(*idx);
+//   printIndex(*idx);
+  return kOk;
 }
 
 ErrorCode DeleteIndex(const char* name) {
@@ -95,7 +99,7 @@ ErrorCode DeleteIndex(const char* name) {
 ErrorCode InsertRecord(Transaction *tx, Index *idx, Record *record) {
   skipnode *node;
   
-  printf("Inserting some record \n");
+//   printf("Inserting some record \n");
 //   int listnum = randInt(idx->attribute_count);
 //   printf("taking list #%i \n", listnum);
 //   printtList(idx->lists[listnum]);
@@ -103,24 +107,25 @@ ErrorCode InsertRecord(Transaction *tx, Index *idx, Record *record) {
   tx->inserted_nodes->insert(node);
 //   printtList(idx->lists[listnum]);
 //   printIndex(idx);
+  return kOk;
 }
 
 ErrorCode UpdateRecord(Transaction *tx, Index *idx, Record *record, Block *new_payload, uint8_t flags) {
-  
+  return kOk;
 }
 
 ErrorCode DeleteRecord(Transaction *tx, Index *idx, Record *record, uint8_t flags) {
-  
+  return deleteRecord(idx->list, record->key);
 }
 
 ErrorCode GetRecords(Transaction *tx, Index *idx, Key min_keys, Key max_keys, Iterator **it) {
-  
+  return findRecords(idx->list, min_keys, max_keys);
 }
 
 ErrorCode GetNext(Iterator *it, Record** record) {
-  
+  return kOk;
 }
 
 ErrorCode CloseIterator(Iterator **it) {
-  
+  return kOk;
 }
