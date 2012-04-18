@@ -21,7 +21,7 @@ bool operator<(Key l, Key r) {
   return compareKeys(l, r) < 0;
 }
 
-skipnode* createNode(Key key, Record* rec) {
+skipnode* createNode(Key key, Record* rec, bool copyRecord) {
   int i;
   skipnode *node = (skipnode*) malloc(sizeof(skipnode));
   
@@ -31,10 +31,14 @@ skipnode* createNode(Key key, Record* rec) {
   }
   node->committed = 0;
   if (rec != 0) {
-    node->hans = key.value[5]->int_value;
+//     node->record = rec;
 //     printf("Copying some record \n");
-    node->record = (Record*) malloc(sizeof(Record));
-    memcpy(node->record, rec, sizeof(Record));
+    if (copyRecord) {
+      node->record = (Record*) malloc(sizeof(Record));
+      memcpy(node->record, rec, sizeof(Record));
+    } else {
+      node->record = rec;
+    }
     node->key = key;
   }
   
@@ -48,7 +52,7 @@ skiplist* createList(KeyType type, int dim, int attribute_count, int max_dim) {
 //   AttributeType *kt;
   skiplist *list;
   
-  if (dim == max_dim) return 0; // attribute_count
+  if (dim == min(MAX_DIM, 4)) return 0; // attribute_count
   
 //   kt = (AttributeType*) malloc(attribute_count*sizeof(AttributeType));
 //   for (i = 0; i < attribute_count; i++) {
@@ -57,7 +61,7 @@ skiplist* createList(KeyType type, int dim, int attribute_count, int max_dim) {
   list = (skiplist*) malloc(sizeof(skiplist));
   list->num = skip_number++;
   list->start = createNode(key, 0);
-  list->p = 0.5;
+  list->p = 0.2;
   list->n = 0;
   list->maxlevel = 1;
   list->type = type;
@@ -166,42 +170,47 @@ ErrorCode findRecords(skiplist* list, Key minkey, Key maxkey, multimap< Key, ski
     minnode = findNodeAndTrack(list, minkey, minpath, false, true);
   }
   // if NULL is given here, search for the end of the list
-  if (minkey.value[list->num_attribute] != 0) {
+  if (maxkey.value[list->num_attribute] != 0) {
     maxnode = findNodeAndTrack(list, maxkey, maxpath, false, true);
   } else {
     maxnode = findNodeAndTrack(list, maxkey, maxpath, true, true);
   }
   
-  i = list->maxlevel-1;
+  i = list->maxlevel;
   while (minpath[i] == maxpath[i] && i > 0) { // i=0 means minkey = maxkey
     i--;
   }
-  
+//   if (i > 1) i = 1;
+//   if (list->num_attribute == list->max_dim-4)
+//     i = 0;
+//   i = max(0,i-1);
+//   printf("have i \n");
   if (i == 0 || minpath[i]->next_dim[i-1] == 0) { // reached leaf level or last dimension, just scan nodes
+//     if (i != 0 && list->num_attribute != 3) printf("o_O \n");
     current = minnode->right[0]; // remember, findNode is always one to the left
-    while (current != 0 && compareKeys(current->key, maxkey, list->num_attribute, true) <= 0) {
-      for (j = 0; j < 5; j++) { // len
-        if (!(compareKeys(minkey, current->key, j, true) <= 0 && compareKeys(current->key, maxkey, j, true) < 0)) {
+    while (current != 0 && current != maxnode) { // compareKeys(current->key, maxkey, list->num_attribute, true) <= 0) {
+      for (j = 0; j < current->key.attribute_count; j++) {
+        if (!((minkey.value[j] == 0 || compareKeys(minkey, current->key, j, true) <= 0) && (maxkey.value[j] == 0 || compareKeys(current->key, maxkey, j, true) < 0))) {
 	  break;
         }
       }
-      if (j == 5) { // len
-//         result[current->key] = current;
+      if (j == current->key.attribute_count) {
         result->insert(pair< Key, skipnode* >(current->key, current));
-//         printf("in range: %i \n", current->key.value[5]->int_value);
       }
-//       printf("found record: %s \n", current->record->payload);
       current = current->right[0];
     }
   } else { // can move to next dimension
     current = minpath[i];
     while (current != maxpath[i]) {
+//       if (current->next_dim[i-1] == 0) printf("etwas ist hier faul \n");
       findRecords(current->next_dim[i-1], minkey, maxkey, result);
       current = current->right[i];
     }
 //     findRecords(minpath[i]->next_dim[i-1], minkey, maxkey);
+//     if (maxpath[i]->next_dim[i-1] == 0) printf("hier auch \n");
     findRecords(maxpath[i]->next_dim[i-1], minkey, maxkey, result);
   }
+//   printf("done. \n");
   return kOk;
 }
 
@@ -209,6 +218,8 @@ ErrorCode deleteRecord(skiplist* list, Key key) {
   int i;
   skipnode *path[NODEHEIGHT];
   skipnode *node;
+  skipnode *current;
+  skipnode **insnode;
   
   for (i = 0; i < NODEHEIGHT; i++) {
     path[i] = list->start;
@@ -216,22 +227,28 @@ ErrorCode deleteRecord(skiplist* list, Key key) {
   
   node = findNodeAndTrack(list, key, path);
   node = node->right[0];
-  if (node == 0)
+  if (node == 0 || compareKeys(node->key, key) != 0) // || compareKeys(node->key, key) != 0
     return kErrorNotFound;
   path[0]->right[0] = node->right[0]; 
 //   for (i = 0; path[i] != list->start && i < NODEHEIGHT; i++) {
 //     printf("o_O %s \n", path[i]->record->payload);
 //   }
 //   printf("o_O %s \n", node->record->payload);
-  for (i = 1; i <= list->maxlevel; i++) {
+  for (i = 1; i < list->maxlevel; i++) {
     // if the linked list in level i jumped over the current node, we just delete it from next_dim,
     // otherwise we have to reconstruct next_dim from scratch
 //     if (node->right[i] != 0) {
     if (path[i]->right[i] == node) {
       path[i]->right[i] = node->right[i];
       if (path[i]->next_dim[i-1] != 0) {
-	deleteList(path[i]->next_dim[i-1]);
-	fillNextDim(list, path[i], path[i]->right[i], i-1);
+// 	deleteList(path[i]->next_dim[i-1]);
+// 	fillNextDim(list, path[i], path[i]->right[i], i-1);
+//         if (node == 0) printf("o_O \n");
+        current = node->right[0];
+	while (current != path[i]->right[i]) {
+	  insert(path[i]->next_dim[i-1], current->key, current->record, insnode, false);
+	  current = current->right[0];
+	}
       } else {
 // 	printf("o_O \n");
       }
@@ -245,12 +262,14 @@ ErrorCode deleteRecord(skiplist* list, Key key) {
 //   printf("done \n");
 }
 
-ErrorCode insert(skiplist* list, Key key, Record* rec, skipnode **insnode) {
+ErrorCode insert(skiplist* list, Key key, Record* rec, skipnode** insnode, bool copyRecord) {
   int i;
   int newLevel;
-  skipnode *node = createNode(key, rec);
+  skipnode *node = createNode(key, rec, copyRecord);
   skipnode *position;
   skipnode *path[NODEHEIGHT];
+  skipnode *current;
+  Record *record = node->record;
   
 //   if (attr.type != list->type) return kErrorIncompatibleKey;
   
@@ -279,13 +298,18 @@ ErrorCode insert(skiplist* list, Key key, Record* rec, skipnode **insnode) {
 // 	  printf("deleting some NULL list \n");
 	} else {
 // 	  printf("deleting some list \n");
-          deleteList(path[i]->next_dim[i-1]);
+//           deleteList(path[i]->next_dim[i-1]);
+          current = node;
+	  while (current != node->right[i]) {
+	    deleteRecord(path[i]->next_dim[i-1], current->key);
+	    current = current->right[0];
+	  }
 	}
 	fillNextDim(list, node, node->right[i], i-1);
-	fillNextDim(list, path[i], node, i-1);
-// 	if (path[i] != list->start && path[i]->next_dim[i-1] != 0) {
-// 	  insert(path[i]->next_dim[i-1], path[i]->key, path[i]->record, insnode);
-// 	}
+// 	fillNextDim(list, path[i], node, i-1);
+// // 	if (path[i] != list->start && path[i]->next_dim[i-1] != 0) {
+// // 	  insert(path[i]->next_dim[i-1], path[i]->key, path[i]->record, insnode);
+// // 	}
       }
     } else {
 //       i++;
@@ -296,7 +320,7 @@ ErrorCode insert(skiplist* list, Key key, Record* rec, skipnode **insnode) {
   for ( ; i < list->maxlevel; i++) {
     if (path[i]->next_dim[i-1] != 0) {
 //       printf("inserting elemets %s in list %i \n", rec->payload, path[i]->next_dim[i-1]->num);
-      insert(path[i]->next_dim[i-1], key, rec, insnode);
+      insert(path[i]->next_dim[i-1], key, record, insnode, false);
     } else {
 //       printf("next_dim ist NULL ;_;, num_attr = %i, element = %s, node =  \n", list->num_attribute, rec->payload);
     }
@@ -340,7 +364,7 @@ void fillNextDim(skiplist *list, skipnode* owner, skipnode* limit, int height) {
     return;
   while (current != limit) {
 //     printf("inserting %s in list %i \n", current->record->payload.data, list->num);
-    insert(owner->next_dim[height], current->key, current->record, insnode);
+    insert(owner->next_dim[height], current->key, current->record, insnode, false);
     current = current->right[0];
   }
 }
@@ -434,15 +458,15 @@ int compareKeys(Key left, Key right, int num_attribute, bool elementOnly) {
   compare = compareAttributes(l, r);
   
   if (!elementOnly) {
-    if (compare == 0) {
-      for (i = 0; i < left.attribute_count; i++) {
+//     if (compare == 0) {
+      for (i = 0; i < left.attribute_count && compare == 0; i++) {
 	if (i == num_attribute) continue;
 	l = *left.value[i];
 	r = *right.value[i];
 	compare = compareAttributes(l, r);
-	if (compare != 0) break;
+// 	if (compare != 0) break;
       }
-    }
+//     }
   }
   
   return compare;

@@ -74,7 +74,7 @@ ErrorCode OpenIndex(const char* name, Index **idx) {
 }
 
 ErrorCode CloseIndex(Index **idx) {
-//   printIndex(*idx);
+  printIndex(*idx);
   return kOk;
 }
 

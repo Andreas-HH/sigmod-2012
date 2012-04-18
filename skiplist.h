@@ -12,7 +12,7 @@
 #include <set>
 
 #define NODEHEIGHT 20
-#define MAX_DIM    4
+#define MAX_DIM    3
 
 using namespace std;
 
@@ -28,7 +28,6 @@ struct skipnode {
   Key key;
   Record *record; // we are supposed to copy the record into the index so that its immutable
   int committed;
-  int64_t hans;
 };
 
 struct skiplist {
@@ -44,7 +43,7 @@ struct skiplist {
   skipnode *start;
 };
 
-skipnode* createNode(Key key, Record* rec);
+skipnode* createNode(Key key, Record* rec, bool copyRecord = true);
 skiplist* createList(KeyType type, int dim, int attribute_count, int max_dim);
 ErrorCode deleteNode(skipnode *node);
 ErrorCode deleteList(skiplist *list);
@@ -52,7 +51,7 @@ ErrorCode deleteList(skiplist *list);
 skipnode* findNode(skiplist* list, Key key);
 skipnode* nextNode(skipnode *current, Key key);
 
-ErrorCode insert(skiplist *list, Key key, Record* rec, skipnode** insnode);
+ErrorCode insert(skiplist *list, Key key, Record* rec, skipnode** insnode, bool copyRecord = true);
 ErrorCode deleteRecord(skiplist *list, Key key);
 ErrorCode findRecords(skiplist* list, Key minkey, Key maxkey, multimap< Key, skipnode* >* result);
 
